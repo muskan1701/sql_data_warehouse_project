@@ -57,12 +57,12 @@ subcat nvarchar(50),
 maintenance nvarchar(50)
 );
 
-
+/*
 ------------------------------------------------------------------------------
 we are going to use bulk insert as its very fast insert data in one go.
 --------------------------------------------------------------------------------
-
 */
+
 create or alter procedure bronze.load_bronze as 
 begin
 	declare @start_time datetime , @end_time datetime,@final_start datetime,@final_end datetime --it is to find the the total time taken by each table to load and the entire procedure
