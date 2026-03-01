@@ -82,3 +82,121 @@ select
 
 
 
+/*
+here we can make two types of views either historical or either current .
+we are doing on current 
+--check uniqueness
+
+select prd_key ,count(*) from 
+(
+select p.prd_id ,
+p.cat_id ,
+p.prd_key ,
+p.prd_nm ,
+p.prd_cost ,
+p.prd_line,
+p.prd_start_dt,
+px.cat,
+px.subcat,
+px.maintenance
+from silver.crm_prd_info p
+left join silver.erp_px_cat_g1v2 px
+on p.cat_id = px.id
+where p.prd_end_dt is null --filter out all historical data 
+)t group by prd_key
+having count (*)>1
+-- it is a dim table we will create surrogate key
+
+
+
+*/
+
+create view gold.dim_products as 
+select 
+ROW_NUMBER()over(order by p.prd_start_dt,p.prd_key) as p_key,--surrogate key
+p.prd_id ,
+p.cat_id ,
+p.prd_key ,
+p.prd_nm ,
+p.prd_cost ,
+p.prd_line,
+p.prd_start_dt,
+px.cat,
+px.subcat,
+px.maintenance
+from silver.crm_prd_info p
+left join silver.erp_px_cat_g1v2 px
+on p.cat_id = px.id
+where p.prd_end_dt is null --filter out all historical data 
+
+
+/*
+this is third views 
+this table is fact table 
+here we have to use dimension's surrogate keys instead of id's to easily connect fatcs with dimensions 
+this process is called as data lookup 
+
+select
+s.sls_ord_num ,
+pr.p_key, --here we are using dimension surrogate key instead od id's
+			s.sls_cust_id,
+			c.cst_id,--as there is some mismatch in data hence i will be using 
+			--this key for joining instead of surrogate key
+			c.customer_key,--here we are using dimension surrogate key instead od id's
+			s.sls_order_dt ,
+			s.sls_ship_dt ,
+			s.sls_due_dt ,
+			s.sls_sales ,
+			s.sls_quantity,
+			s.sls_price 
+from silver.crm_sales_details s
+left join gold.dim_products pr 
+on s.sls_prd_key =pr.prd_key
+left join gold.dim_customers c
+on s.sls_cust_id =c.cst_id
+
+-- here we are building facts table
+
+
+create view gold.fact_sales as 
+select
+s.sls_ord_num ,
+pr.p_key, --here we are using dimension surrogate key instead od id's
+			s.sls_cust_id,
+			c.cst_id,--as there is some mismatch in data hence i will be using 
+			--this key for joining instead of surrogate key
+			c.customer_key,--here we are using dimension surrogate key instead od id's
+			s.sls_order_dt ,
+			s.sls_ship_dt ,
+			s.sls_due_dt ,
+			s.sls_sales ,
+			s.sls_quantity,
+			s.sls_price 
+from silver.crm_sales_details s
+left join gold.dim_products pr 
+on s.sls_prd_key =pr.prd_key
+left join gold.dim_customers c
+on s.sls_cust_id =c.cst_id
+
+-- check data quality
+-- check if all dimension tables can successfully join to the fact table
+--foreign key integrity
+
+select * from gold.fact_sales f
+left join gold.dim_customers c 
+on f.customer_key =c.customer_key
+left join gold.dim_products p
+on p.p_key =f.p_key
+where p.p_key is null
+
+*/
+
+
+/*
+we can create data catalog fopr each column to avoid repeated question in 
+here we can describe of each table and column and how each table is connectred with other all such details in a 
+document for ease of the end users as well as people who all are about to use it 
+*/
+
+
+
